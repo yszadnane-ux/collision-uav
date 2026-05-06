@@ -13,8 +13,3 @@ L’objectif est d’éviter les collisions en identifiant instantanément la pa
 1. Tri des drones selon la coordonnée `x` (tri fusion, O(n log n)).
 2. Parcours linéaire : pour chaque drone, on regarde seulement les voisins dont l’écart en `x` est inférieur à la distance minimale courante.
 3. Conservation de la paire ayant la plus petite distance euclidienne.
-
-## Compilation et exécution
-```bash
-gcc -o collision main.c -lm
-./collision
