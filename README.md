@@ -5,7 +5,7 @@ Ce projet implémente un système temps réel de détection des deux drones les 
 L’objectif est d’éviter les collisions en identifiant instantanément la paire critique, dans des contraintes matérielles sévères.
 
 ## Contraintes respectées
-- **Pas d’utilisation de `TAB[ ]`** : toute la navigation mémoire se fait par arithmétique pure des pointeurs (`*(ptr + offset)` ou `ptr->membre`).
+- **Pas d’utilisation de `[ ]`** : toute la navigation mémoire se fait par arithmétique pure des pointeurs (`*(ptr + offset)` ou `ptr->membre`).
 - **Allocation unique sur le tas** : un seul bloc `malloc` contigu pour les 10 000 drones.
 - **Complexité optimisée** : abandon de l’approche naïve O(n²) pour une méthode en O(n log n) (tri + balayage linéaire élagué).
 
