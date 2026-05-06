@@ -1,137 +1,99 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <float.h>
 #include <math.h>
+#include <time.h>
 
-typedef struct {
+#define N 10000
+
+typedef struct Drone {
     int id;
     float x, y, z;
 } Drone;
 
-// Distance euclidienne
-float distance(Drone *a, Drone *b) {
-    return sqrt(
-        (a->x - b->x)*(a->x - b->x) +
-        (a->y - b->y)*(a->y - b->y) +
-        (a->z - b->z)*(a->z - b->z)
-    );
+// Distance au carré (évite sqrt inutile)
+float distance_sq(const Drone *a, const Drone *b) {
+    float dx = a->x - b->x;
+    float dy = a->y - b->y;
+    float dz = a->z - b->z;
+    return dx*dx + dy*dy + dz*dz;
 }
 
-// Swap avec pointeurs
-void swap(Drone *a, Drone *b) {
-    Drone temp = *a;
-    *a = *b;
-    *b = temp;
-}
-
-// Tri rapide (QuickSort) basé sur x
-void quickSort(Drone *base, int left, int right) {
-    if (left >= right) return;
-
-    float pivot = (base + right)->x;
-    int i = left - 1;
-
-    for (int j = left; j < right; j++) {
-        if ((base + j)->x < pivot) {
-            i++;
-            swap(base + i, base + j);
-        }
+// Fusion de deux sous-tableaux triés selon x (arithmétique des pointeurs)
+void merge_by_x(Drone *arr, int left, int mid, int right, Drone *temp) {
+    int i = left, j = mid + 1, k = left;
+    while (i <= mid && j <= right) {
+        if ((arr + i)->x <= (arr + j)->x)
+            *(temp + k++) = *(arr + i++);
+        else
+            *(temp + k++) = *(arr + j++);
     }
-
-    swap(base + i + 1, base + right);
-
-    quickSort(base, left, i);
-    quickSort(base, i + 2, right);
+    while (i <= mid) *(temp + k++) = *(arr + i++);
+    while (j <= right) *(temp + k++) = *(arr + j++);
+    for (i = left; i <= right; ++i)
+        *(arr + i) = *(temp + i);
 }
 
-// Version naïve (petits cas)
-float bruteForce(Drone *drones, int n, Drone **d1, Drone **d2) {
-    float min = 1e9;
+// Tri fusion récursif
+void merge_sort(Drone *arr, int left, int right, Drone *temp) {
+    if (left < right) {
+        int mid = left + (right - left) / 2;
+        merge_sort(arr, left, mid, temp);
+        merge_sort(arr, mid + 1, right, temp);
+        merge_by_x(arr, left, mid, right, temp);
+    }
+}
 
-    for (int i = 0; i < n; i++) {
-        for (int j = i + 1; j < n; j++) {
-            float d = distance(drones + i, drones + j);
-            if (d < min) {
-                min = d;
-                *d1 = drones + i;
-                *d2 = drones + j;
+// Tri public par x
+void sort_drones_by_x(Drone *drones, int n) {
+    Drone *temp = (Drone*) malloc(n * sizeof(Drone));
+    if (!temp) return;
+    merge_sort(drones, 0, n - 1, temp);
+    free(temp);
+}
+
+// Recherche de la paire la plus proche dans le tableau trié
+void find_closest_pair(const Drone *drones, int n, int *id1, int *id2, float *dist) {
+    float min_sq = FLT_MAX;
+    for (int i = 0; i < n; ++i) {
+        for (int j = i + 1; j < n; ++j) {
+            float dx = (drones + j)->x - (drones + i)->x;
+            if (dx * dx >= min_sq) break;   // élagage par X
+            float d2 = distance_sq(drones + i, drones + j);
+            if (d2 < min_sq) {
+                min_sq = d2;
+                *id1 = (drones + i)->id;
+                *id2 = (drones + j)->id;
             }
         }
     }
-    return min;
+    *dist = sqrtf(min_sq);
 }
 
-// Fonction principale Divide & Conquer
-float closestUtil(Drone *drones, int n, Drone **d1, Drone **d2) {
-    if (n <= 3)
-        return bruteForce(drones, n, d1, d2);
-
-    int mid = n / 2;
-    Drone *midDrone = drones + mid;
-
-    Drone *dl1, *dl2, *dr1, *dr2;
-
-    float dl = closestUtil(drones, mid, &dl1, &dl2);
-    float dr = closestUtil(drones + mid, n - mid, &dr1, &dr2);
-
-    float d = dl;
-    *d1 = dl1;
-    *d2 = dl2;
-
-    if (dr < d) {
-        d = dr;
-        *d1 = dr1;
-        *d2 = dr2;
-    }
-
-    // Zone critique (strip)
-    Drone *strip = (Drone *)malloc(n * sizeof(Drone));
-    int j = 0;
-
-    for (int i = 0; i < n; i++) {
-        if (fabs((drones + i)->x - midDrone->x) < d) {
-            *(strip + j) = *(drones + i);
-            j++;
-        }
-    }
-
-    for (int i = 0; i < j; i++) {
-        for (int k = i + 1; k < j && k < i + 7; k++) {
-            float dist = distance(strip + i, strip + k);
-            if (dist < d) {
-                d = dist;
-                *d1 = strip + i;
-                *d2 = strip + k;
-            }
-        }
-    }
-
-    free(strip);
-    return d;
-}
-
-// Fonction principale
 int main() {
-    int n = 10000;
+    // Allocation d'un bloc contigu (le tas)
+    Drone *drones = (Drone*) malloc(N * sizeof(Drone));
+    if (!drones) return 1;
 
-    Drone *essaim = (Drone *)malloc(n * sizeof(Drone));
-
-    // Initialisation
-    for (int i = 0; i < n; i++) {
-        (essaim + i)->id = i;
-        (essaim + i)->x = rand() % 1000;
-        (essaim + i)->y = rand() % 1000;
-        (essaim + i)->z = rand() % 1000;
+    // Initialisation aléatoire
+    srand((unsigned)time(NULL));
+    for (int i = 0; i < N; ++i) {
+        (drones + i)->id = i + 1;
+        (drones + i)->x = (float)rand() / RAND_MAX * 1000.0f;
+        (drones + i)->y = (float)rand() / RAND_MAX * 1000.0f;
+        (drones + i)->z = (float)rand() / RAND_MAX * 1000.0f;
     }
 
-    quickSort(essaim, 0, n - 1);
+    // Tri par X
+    sort_drones_by_x(drones, N);
 
-    Drone *d1, *d2;
-    float minDist = closestUtil(essaim, n, &d1, &d2);
+    int idA, idB;
+    float distance;
+    find_closest_pair(drones, N, &idA, &idB, &distance);
 
-    printf("Distance minimale: %f\n", minDist);
-    printf("Drone 1 ID: %d\n", d1->id);
-    printf("Drone 2 ID: %d\n", d2->id);
+    printf("Drones les plus proches : %d et %d\n", idA, idB);
+    printf("Distance = %f\n", distance);
 
-    free(essaim);
+    free(drones);
     return 0;
 }
