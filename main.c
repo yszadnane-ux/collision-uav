@@ -19,7 +19,7 @@ float distance_sq(const Drone *a, const Drone *b) {
     return dx*dx + dy*dy + dz*dz;
 }
 
-// Fusion de deux sous-tableaux triés selon x (arithmétique des pointeurs)
+// Fusion de deux sous-tableaux triés selon x
 void merge_by_x(Drone *arr, int left, int mid, int right, Drone *temp) {
     int i = left, j = mid + 1, k = left;
     while (i <= mid && j <= right) {
@@ -71,11 +71,11 @@ void find_closest_pair(const Drone *drones, int n, int *id1, int *id2, float *di
 }
 
 int main() {
-    // Allocation d'un bloc contigu (le tas)
+    // Allocation d'un bloc contigu 
     Drone *drones = (Drone*) malloc(N * sizeof(Drone));
     if (!drones) return 1;
 
-    // Initialisation aléatoire
+    // Initialisation
     srand((unsigned)time(NULL));
     for (int i = 0; i < N; ++i) {
         (drones + i)->id = i + 1;
@@ -84,7 +84,7 @@ int main() {
         (drones + i)->z = (float)rand() / RAND_MAX * 1000.0f;
     }
 
-    // Tri par X
+    // Tri par x
     sort_drones_by_x(drones, N);
 
     int idA, idB;
